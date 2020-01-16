@@ -139,6 +139,8 @@ fn process_osm(pp_path: &str, osm_path: &str, postcode_path: &str, result_path: 
     result_file.write(jsonl.as_bytes()).unwrap();
     result_file.write(b"\n").unwrap();
   }
+
+  println!("finished... '{}'", &result_path);
 }
 
 // csv -> ("[street]:[housenumber]", Record)

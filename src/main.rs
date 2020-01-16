@@ -4,6 +4,7 @@ use kdtree::{distance::squared_euclidean, KdTree};
 use quick_xml::events as xml_events;
 use quick_xml::events::Event as XMLEvent;
 use quick_xml::Reader as XMLReader;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -11,7 +12,9 @@ use std::fs::File;
 use std::hash::Hash;
 use std::io::prelude::*;
 use std::io::{BufReader, SeekFrom};
+use std::path::PathBuf;
 use std::str;
+use structopt::StructOpt;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 struct Point {
@@ -24,6 +27,18 @@ struct House {
   nodes: Vec<Point>,
   #[serde(flatten)]
   attrs: HashMap<String, String>,
+}
+
+#[derive(StructOpt, Debug)]
+struct Cli {
+  #[structopt(long = "pp", parse(from_os_str))]
+  pp: PathBuf,
+  #[structopt(long = "osm", parse(from_os_str), multiple = true)]
+  osm: Vec<PathBuf>,
+  #[structopt(long = "postcode", parse(from_os_str))]
+  postcode: PathBuf,
+  #[structopt(short = "o", long = "output", parse(from_os_str))]
+  output: PathBuf,
 }
 
 // HM<K, A>, I<K, B> => (A, B, K) for every HM(K) == I(K)
@@ -53,26 +68,44 @@ impl<'a, A: Clone, B, K: Hash + Eq, I: Iterator<Item = (K, B)>> Iterator
 }
 
 fn main() {
-  let postcode_path = String::from("data/ukpostcodes.csv");
-  let result_path = String::from("data/berkshire-latest.jsonl");
-  let osm_path = String::from("data/berkshire-latest.osm");
-  let pp_path = String::from("data/pp-complete.csv");
+  let args = Cli::from_args();
 
+  let pp = args.pp;
+  let osm = args.osm;
+  let postcode = args.postcode;
+  let output = args.output;
+
+  osm.par_iter().for_each(|osm| {
+    let mut osm = osm.clone();
+    osm.set_extension("osm");
+    let mut jsonl = output.clone();
+    jsonl.push(osm.file_name().unwrap());
+    jsonl.set_extension("jsonl");
+    process_osm(
+      pp.to_str().unwrap(),
+      osm.to_str().unwrap(),
+      postcode.to_str().unwrap(),
+      jsonl.to_str().unwrap(),
+    );
+  })
+}
+
+fn process_osm(pp_path: &str, osm_path: &str, postcode_path: &str, result_path: &str) {
   fs::remove_file(&result_path).unwrap_or_default();
   let mut result_file = File::create(&result_path).unwrap();
 
-  println!("opening osm...");
+  println!("opening osm... '{}'", &osm_path);
   let mut osm_file = File::open(&osm_path).unwrap();
-  println!("getting houseseeks...");
+  println!("getting houseseeks... '{}'", &osm_path);
   let mut houseseeks = get_houseseeks(&osm_path);
-  println!("getting houserows...");
+  println!("getting houserows... '{}'", &pp_path);
   let houserows = get_houserows(&pp_path);
-  println!("getting nodepoints...");
+  println!("getting nodepoints... '{}'", &osm_path);
   let nodepoints = get_nodepoints(&osm_path);
-  println!("getting postcodes...");
+  println!("getting postcodes... '{}'", &postcode_path);
   let postcodes = get_postcodes(&postcode_path);
 
-  println!("matching... run 'tail -f {}' for progress", result_path);
+  println!("matching... run 'tail -f {}' for progress", &result_path);
 
   let hmi = HashMatchIterator {
     hashmap: &mut houseseeks,

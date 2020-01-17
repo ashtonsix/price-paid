@@ -5,6 +5,7 @@ pip3 install awscli --upgrade --user
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 source .profile
+aws configure
 
 ssh -T git@github.com # make sure this says "ashtonsix"
 git clone git@github.com:ashtonsix/price-paid.git

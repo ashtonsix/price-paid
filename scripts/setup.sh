@@ -14,6 +14,8 @@ cd price-paid
 mkdir data
 cd data
 
+mkdir tiles
+
 mkdir shared
 cd shared
 wget http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com/pp-complete.csv

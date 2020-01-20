@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react'
+import React, {useEffect, useRef, useState} from 'react'
 import createPalette from 'color-interpolate'
 
 const _palette = [
@@ -180,7 +180,15 @@ function Tick({p, v}) {
 }
 
 function App() {
-  const ticks = 11
+  const [width, setWidth] = useState()
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth)
+    setWidth(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  if (!width) return null
+  const ticks = width > 1000 ? 11 : width > 500 ? 6 : 3
   return (
     <div style={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
       <PPMap />
